@@ -128,3 +128,52 @@ display_point_patterns(list(
 ), titles=plot_titles)
 ```
 
+If, for small distances, the L-function diverges from the theoretical straight function (a straight line), then that is a implication that there is either clustering or repulsion in the dataset. For each of the datasets provided:
+- Cells: The L-function goes below the theoretical L-function, meaning that there are fewer points than expected in the ball with small $r$. This implies that there is repulsion in the point process, and a Gibbs process might be more suitable.
+- Redwood: The L-function is slightly higher than the theoretical function for small $r$, which is an implication of clustering, as discussed in 1a), and a Neymann-Scott process may therefore be more suitable.
+- Pines: The estimated L-function is mostly a straight line coresponding to the theoretical function, implying that a Poisson point process is a suitable model.
+
+
+## c)
+For a homogeneous Poisson point process on a window $W\subseteq \mathbb{R}^m$, we have the convenient result:
+\begin{equation}
+  \left[\mathbf{x}_1. \cdots, \mathbf{x}_n | N(W)=n\right] \sim U(W)
+\end{equation}
+
+In this case, $m=2$ and $W=[0, 1]\times[0, 1]$. The points are therefore very easy to simulate, as they follow a uniform distribution on $W$.
+```{r}
+simulate_R2_ppp <- function(n, m) {
+  # Simulates a homogeneous Poisson point process on R^2 in m realizations on [0, 1]x[0, 1].
+  # Args: n (amount of points to simulate in each realization) and m (amount of realizations)
+  # Returns: mxnx2 array.
+  dims <- c(m, n, 2)
+  realizations <- array(runif(m*n*2), dims)
+  return(realizations)
+}
+```
+
+```{r}
+calculate_L_functions <- function(realizations) {
+  # Given realizations of some point process in the form of an array, calculates
+  # the L-function for each realiztion and returns as an array.
+  # Args: realizations (mxnxd array)
+  #         - m: Amount of realzations
+  #         - n: Amount of points per realization
+  #         - d: Amount of dimensions
+  # Returns: mxnx(d-1)-array
+  return(0)
+}
+```
+
+```{r}
+L_function_stats <- function(L_functions) {
+  # Given an array of m L-functions at n points, calculates mean and 90%
+  # confidence intervals.
+  # Args: L_functions (mxn)
+  # Returns: Dataframe of L-functions
+  stats <- L_functions %>% melt() %>%
+    group_by(Var2)
+    summarize(mean=)
+}
+```
+
