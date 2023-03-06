@@ -2,7 +2,7 @@
 title: "TMA4250-Project-2"
 author: "Ole Riddervold, Ole Kristian Skogly"
 date: "2023-03-06"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -10,9 +10,121 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(spatial)
 library(MASS)
+library(ggplot2)
+library(patchwork)
+library(glue)
+library(tidyverse)
+```
+
+## Loading data
+```{r}
+cells   <- read.table("data/cells.dat", skip=3, col.names=c('x', 'y'))
+redwood <- read.table("data/redwood.dat", skip=3, col.names=c('x', 'y'))
+pines   <- read.table("data/pines.dat", skip=3, col.names=c('x', 'y'))
+```
+
+## Exploring data
+```{r}
+head(cells)
+head(redwood)
+head(pines)
+```
+
+
+# Problem 1
+## a)
+```{r}
+display_point_patterns <- function(dataframes, titles) {
+  # Plots point patterns for dataframes with point data
+  # Args: Dataframes and titles as lists of the same lengths
+  # Returns: None
+  n <- length(dataframes)
+  do.call(
+    wrap_plots,
+    lapply(1:n, function(i) {
+      ggplot(dataframes[[i]]) + geom_point(aes(x, y), size=1) +
+        xlab('x') + ylab('y') + labs(title=titles[i]) +
+        coord_fixed()
+    })
+  )
+}
 ```
 
 ```{r}
-cells <- cells
+plot_titles = c(
+  "Cells",
+  "Redwood",
+  "Pines"
+)
+
+# png("figures/1_a.png", width=3600, height=1200, units="px", res=300) # Saving
+
+display_point_patterns(list(
+  cells,
+  redwood,
+  pines
+), plot_titles)
+```
+For the Cells dataset, the points seem to be uniformly spread across the whole window. This would make sense since cells exist in very large quantities, and repel each other to a certain degree (https://www.hcplive.com/view/cells_repel). This will result in a uniform distribution of points when we pick a small window.
+
+Comparing the last two dataset, it is evident that redwood trees have a tendency to grow in clusters along streams and other bodies of water (https://www.fs.usda.gov/research/treesearch/41153), which is very evident in the point patern plotted above. Pines, however, tend to follow a more random pattern of growth (https://www.researchgate.net/publication/227015905_The_problem_of_accuracy_in_environmental_analysis), giving the random pattern that is seen in the rightmost plot of Figure (FIGREF).
+
+## b)
+The L-function is defined by
+\begin{equation}
+  L(r) = \sqrt[d]{\frac{K(r)}{b_d}}
+\end{equation}
+
+where
+\begin{align}
+  K(r) &= \frac{1}{\lambda}\mathbb{E}_\mathbf{0}\left[N\left(B_r(\mathbf{0}\backslash\{\mathbf{0}\})\right)\right] \\
+  b_d = \nu(B_1(\mathbf{0}))
+\end{align},
+$B_r(\mathbf{x})$ denotes a ball of radius $r$ centered in $\mathbf{x}$ in the relevant space (here $\mathbb{R}^2$), and $\nu$ denotes the volume-function. The K-function $K(r)$ can be interpreted as the ratio between the expected number of points in a ball centered at $\mathbf{0}$ excluding the origin itself, *given* that there is a point at the origin, and the rate of the point process itself. Therefore one can say that the L-function is a variant of the K-function that takes the curse of dimensionality, i.e. the fact that points get further apart the larger the dimension, into account. In $\mathbb{R}^2$, we have
+\begin{equation}
+  L(r) = \sqrt(\frac{K(r)}{\pi})
+\end{equation}
+
+Estimation of the L-function:
+```{r}
+pp.cells   <- ppinit("data/cells.dat")
+pp.redwood <- ppinit("data/redwood.dat")
+pp.pines   <- ppinit("data/pines.dat")
+
+L.cells   <- data.frame(Kfn(pp.cells, fs=1.0)[1:2])
+L.redwood <- data.frame(Kfn(pp.redwood, fs=1.0)[1:2])
+L.pines   <- data.frame(Kfn(pp.pines, fs=1.0)[1:2])
+```
+
+L-function plotting:
+```{r}
+display_point_patterns <- function(dataframes, titles) {
+  # Plots K-functions and affine lines with growth 1 for comparison
+  # Args: Dataframes and titles as same length lists
+  # Returns: None
+  n <- length(dataframes)
+  do.call(
+    wrap_plots,
+    lapply(1:n, function(i) {
+      ni <- nrow(dataframes[[i]])
+      df <- dataframes[[i]] %>% mutate(xline=1:ni/100, yline=1:ni/100)
+      ggplot(df) + geom_point(aes(x, y), size=1, col="red") +
+        xlab('x') + ylab('y') + labs(title=titles[i]) +
+        geom_line(aes(xline, yline)) +
+        coord_fixed()
+    })
+  )
+}
+```
+
+
+```{r}
+# png("figures/1_b.png", width=3600, height=1200, units="px", res=300) # Saving
+
+display_point_patterns(list(
+  L.cells,
+  L.redwood,
+  L.pines
+), titles=plot_titles)
 ```
 
