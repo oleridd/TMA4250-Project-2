@@ -14,6 +14,7 @@ library(ggplot2)
 library(patchwork)
 library(glue)
 library(tidyverse)
+library(reshape2)
 ```
 
 ## Loading data
@@ -98,7 +99,7 @@ L.pines   <- data.frame(Kfn(pp.pines, fs=1.0)[1:2])
 
 L-function plotting:
 ```{r}
-display_point_patterns <- function(dataframes, titles) {
+display_L_functions <- function(dataframes, titles) {
   # Plots K-functions and affine lines with growth 1 for comparison
   # Args: Dataframes and titles as same length lists
   # Returns: None
@@ -121,7 +122,7 @@ display_point_patterns <- function(dataframes, titles) {
 ```{r}
 # png("figures/1_b.png", width=3600, height=1200, units="px", res=300) # Saving
 
-display_point_patterns(list(
+display_L_functions(list(
   L.cells,
   L.redwood,
   L.pines
@@ -131,18 +132,18 @@ display_point_patterns(list(
 If, for small distances, the L-function diverges from the theoretical straight function (a straight line), then that is a implication that there is either clustering or repulsion in the dataset. For each of the datasets provided:
 - Cells: The L-function goes below the theoretical L-function, meaning that there are fewer points than expected in the ball with small $r$. This implies that there is repulsion in the point process, and a Gibbs process might be more suitable.
 - Redwood: The L-function is slightly higher than the theoretical function for small $r$, which is an implication of clustering, as discussed in 1a), and a Neymann-Scott process may therefore be more suitable.
-- Pines: The estimated L-function is mostly a straight line coresponding to the theoretical function, implying that a Poisson point process is a suitable model.
+- Pines: The estimated L-function is mostly a straight line corresponding to the theoretical function, implying that a Poisson point process is a suitable model.
 
 
 ## c)
 For a homogeneous Poisson point process on a window $W\subseteq \mathbb{R}^m$, we have the convenient result:
 \begin{equation}
-  \left[\mathbf{x}_1. \cdots, \mathbf{x}_n | N(W)=n\right] \sim U(W)
+  \left[\mathbf{x}_1. \cdots, \mathbf{x}_n | N(W)=n\right] \overset{\text{i.i.d.}}{\sim} U(W)
 \end{equation}
 
 In this case, $m=2$ and $W=[0, 1]\times[0, 1]$. The points are therefore very easy to simulate, as they follow a uniform distribution on $W$.
 ```{r}
-simulate_R2_ppp <- function(n, m) {
+simulate_R2_unif <- function(n, m) {
   # Simulates a homogeneous Poisson point process on R^2 in m realizations on [0, 1]x[0, 1].
   # Args: n (amount of points to simulate in each realization) and m (amount of realizations)
   # Returns: mxnx2 array.
@@ -161,7 +162,7 @@ calculate_L_functions <- function(realizations) {
   #         - n: Amount of points per realization
   #         - d: Amount of dimensions
   # Returns: mxnx(d-1)-array
-  return(0)
+  return(realizations)
 }
 ```
 
@@ -172,8 +173,56 @@ L_function_stats <- function(L_functions) {
   # Args: L_functions (mxn)
   # Returns: Dataframe of L-functions
   stats <- L_functions %>% melt() %>%
-    group_by(Var2)
-    summarize(mean=)
+    group_by(Var2) %>%
+    summarize(mean=mean(value), CI90=1.64*sd(value/sqrt(length(value))))
+  return(stats)
 }
 ```
 
+```{r}
+simulate_R2_ppp_Lfn <- function(n, m) {
+  # Simulates a Poisson point process conditional on N = n, and returning
+  # a dataframe containing empirically estimated L-function and 90% CI.
+  return(
+    simulate_R2_unif(n, m) %>%
+      calculate_L_functions() %>%
+      L_function_stats()
+  )
+}
+```
+
+```{r}
+display_L_functions_with_ppp_sim <- function(dataframes, titles, m=100) {
+  # Plots K-functions and affine lines with growth 1 for comparison
+  # Args: Dataframes and titles as same length lists
+  # Returns: None
+  n <- length(dataframes)
+  do.call(
+    wrap_plots,
+    lapply(1:n, function(i) {
+      ni <- nrow(dataframes[[i]])
+      simi <- simulate_R2_ppp_Lfn(n=ni, m=m)
+      df <- dataframes[[i]] %>% mutate(Lmean=simi$mean, LCI=simi$CI90)
+      ggplot(df) + geom_point(aes(x, y), size=1, col="red") +
+        geom_line(aes(x, Lmean)) +
+        geom_ribbon(aes(x, ymin=Lmean-LCI, ymax=Lmean+LCI), alpha=0.25) +
+        xlab('x') + ylab('y') + labs(title=titles[i]) +
+        coord_fixed()
+    })
+  )
+}
+```
+
+```{r}
+# png("figures/1_b.png", width=3600, height=1200, units="px", res=300) # Saving
+
+display_L_functions_with_ppp_sim(list(
+  L.cells,
+  L.redwood,
+  L.pines
+), titles=plot_titles)
+```
+
+
+# Problem 2
+## a)
