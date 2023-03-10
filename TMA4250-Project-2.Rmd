@@ -8,6 +8,9 @@ output: pdf_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+# install.packages("ggnewscale")
+# install.packages("scales")
+
 library(spatial)
 library(MASS)
 library(ggplot2)
@@ -15,7 +18,10 @@ library(patchwork)
 library(glue)
 library(tidyverse)
 library(reshape2)
+library(ggnewscale)
+library(scales)
 ```
+
 
 ## Loading data
 ```{r}
@@ -154,27 +160,36 @@ simulate_R2_unif <- function(n, m) {
 ```
 
 ```{r}
-calculate_L_functions <- function(realizations) {
+calculate_R2_L_functions <- function(realizations) {
   # Given realizations of some point process in the form of an array, calculates
   # the L-function for each realiztion and returns as an array.
-  # Args: realizations (mxnxd array)
+  # Args: realizations (mxnx2 array)
   #         - m: Amount of realzations
   #         - n: Amount of points per realization
-  #         - d: Amount of dimensions
-  # Returns: mxnx(d-1)-array
-  return(realizations)
+  # Returns: mxn-array
+  d <- dim(realizations)
+  L <- array(rep(0, prod(d[1:2])), d[1:2])
+  for (i in 1:d[1]) {
+    df <- data.frame(realizations[i, , ])
+    colnames(df) <- c('x', 'y')
+    L[i, ] <- Kfn(df, fs=1.0)$y
+  }
+  return(L)
 }
 ```
 
 ```{r}
-L_function_stats <- function(L_functions) {
+R2_L_function_stats <- function(L_functions) {
   # Given an array of m L-functions at n points, calculates mean and 90%
   # confidence intervals.
   # Args: L_functions (mxn)
   # Returns: Dataframe of L-functions
   stats <- L_functions %>% melt() %>%
     group_by(Var2) %>%
-    summarize(mean=mean(value), CI90=1.64*sd(value/sqrt(length(value))))
+    summarize(
+      mean=mean(value),
+      CI90=qt(0.05, length(value))*sd(value)*sqrt(1 + 1/length(value))
+    )
   return(stats)
 }
 ```
@@ -185,8 +200,8 @@ simulate_R2_ppp_Lfn <- function(n, m) {
   # a dataframe containing empirically estimated L-function and 90% CI.
   return(
     simulate_R2_unif(n, m) %>%
-      calculate_L_functions() %>%
-      L_function_stats()
+      calculate_R2_L_functions() %>%
+      R2_L_function_stats()
   )
 }
 ```
@@ -214,7 +229,7 @@ display_L_functions_with_ppp_sim <- function(dataframes, titles, m=100) {
 ```
 
 ```{r}
-# png("figures/1_b.png", width=3600, height=1200, units="px", res=300) # Saving
+png("figures/1_c.png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_L_functions_with_ppp_sim(list(
   L.cells,
@@ -226,3 +241,129 @@ display_L_functions_with_ppp_sim(list(
 
 # Problem 2
 ## a)
+```{r}
+obspines <- read.table("data/obspines.txt", skip=1, col.names=c('x', 'y', 'obs'))
+obsprob <- read.table("data/obsprob.txt", skip=1, col.names=c('x', 'y', 'prob'))
+```
+
+
+```{r}
+# png("figures/2_a1.png", width=1200, height=1200, units="px", res=300) # Saving
+ggplot(obspines) +
+  geom_tile(aes(x, y, fill=obs)) + scale_fill_gradient(low="white", high="purple") +
+  xlab('x [m]') + ylab('y [m]') + 
+  coord_fixed()
+
+# png("figures/2_a2.png", width=1200, height=1200, units="px", res=300) # Saving
+ggplot(obsprob) + 
+  geom_tile(aes(x, y, fill=prob)) + scale_fill_gradient(low='white', high='darkgreen') + 
+  xlab('x [m]') + ylab('y [m]') +
+  coord_fixed()
+```
+
+
+## b)
+Assuming that the pine trees follow a Poisson point process, which supports the conclusions made in 1). It can be proved that if $\alpha: W \rightarrow[0,1]$ denotes detection probabilities on $W$ (which in this case is defined as $W = [0, 300]\times[0, 300]$), and $N(\mathbf{x})$ is a homogeneous Poisson P.P. with rate $\lambda_N$ then the observed points $M(\mathbf{x})$ follow an inhomogeneous Poisson P.P. with rate given by
+\begin{equation}
+  \lambda_M(\mathbf{x}) = \lambda_N \alpha(\mathbf{x}) \: \:\forall \: \mathbf{x} \in W
+\end{equation}
+Thus, we get that
+\begin{align}
+  M | N &\sim \mathrm{Poisson}(\nu_{\lambda_M}(W)) \\
+  \nu_{\lambda_M}(W) &= \lambda_N\int_W{\alpha_(\mathbf{x})\mathrm{d}\mathbf{x}}
+\end{align}
+Consequently, the point locations are distributed uniformly with pdf
+\begin{equation}
+  f(\mathbf{x}_1, \cdots, \mathbf{x}_m | M(W)=m) = \prod_{i=1}^m{\frac{\lambda_M(\mathbf{x}_i)}{\nu_{\lambda_M}(W)}} = \left(\frac{\lambda_N}{\nu_{\lambda_M}(W)}\right)^m\prod_{i=1}^m{\alpha(\mathbf{x}_i)}
+\end{equation}
+
+## c)
+We want to determine $C$ such that
+\begin{equation}
+  \hat{\Lambda} = \frac{1}{C}\sum_{i, j}{M_{ij}}
+\end{equation}
+is unbiased.
+
+Estimate from data:
+```{r}
+remote_estimate_lambda <- function(obs, prob, grid_size) {
+  # Estimates lambda based on observed points and detection probabilities
+  # Args: obs (Amount of observations in a gridpoint), alpha (detection probabilities)
+  # Returns: (float) Estimate of lambda
+  C <- grid_size*sum(prob) # Normalizing constant
+  lambda_hat <- sum(obs)/C
+  return(lambda_hat)
+}
+```
+
+```{r}
+grid_size <- 10^2 # For this particular problem
+lambda_hat <- remote_estimate_lambda(obspines$obs, obsprob$prob, grid_size)
+lambda_hat
+```
+
+With the given data, the estimate is approximately $\hat{\lambda}_N = 0.0104$.
+
+The following algorithm takes a grid in the form of a dataframe with x- and y-coordinates and corresponding rate $\lambda$, and simulates a homogeneous P.P.P. in each point using the rate.
+
+```{r}
+simulate_ppp_on_grid <- function(grid, cell_size, poisson_displacement=0) {
+  # Simulates a inhomogeneous Poisson point process on a square grid.
+  # Args:
+  #   grid  (Dataframe): Coordinates and rate (columns x, y, lambda)
+  #   cell_size (float): Length of the given cell
+  # Returns:
+  #   Matrix of points
+  k <- nrow(grid)
+  n <- rpois(k, grid$lambda*cell_size^2) + poisson_displacement # n for every point
+  points <- array(
+    runif(2*sum(n), min=0, max=cell_size),
+    c(sum(n), 2)
+  ) %>% data.frame()
+  colnames(points) <- c('x', 'y')
+
+  # Adding x- and y-values to each point:
+  ind <- 0
+  for (i in 1:k) {
+    if (n[i] > 0) {
+      for (j in 1:n[i]) {
+        points$x[ind+j] <- points$x[ind+j] + grid$x[i]
+        points$y[ind+j] <- points$y[ind+j] + grid$y[i]
+      }
+      ind <- ind + n[i]
+    }
+  }
+  return(points)
+}
+```
+
+```{r}
+grid <- obsprob %>% select(c('x', 'y')) %>% mutate(lambda=lambda_hat)
+points_homogeneous_ppp <- replicate(3, simulate_ppp_on_grid(grid, cell_size=10), simplify=FALSE)
+```
+
+```{r}
+# png("figures/2_c.png", width=1200, height=1200, units="px", res=300) # Saving
+
+display_point_patterns(
+  points_homogeneous_ppp,
+  titles=c("", "", "")
+)
+```
+
+## d)
+```{r}
+grid <- obsprob %>% mutate(lambda=lambda_hat*(1-prob)) %>% select(-prob)
+m <- nrow(obspines %>% subset(obs > 0)) # THIS NEEDS TO BE A LIST OR DATAFRAME
+points_inhomogeneous_ppp <- replicate(3, simulate_ppp_on_grid(grid, cell_size=10, poisson_displacement=m), simplify=FALSE)
+```
+
+```{r}
+# png("figures/2_d.png", width=1200, height=1200, units="px", res=300) # Saving
+
+display_point_patterns(
+  points_inhomogeneous_ppp,
+  titles=c("", "", "")
+)
+```
+
