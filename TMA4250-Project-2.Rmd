@@ -307,7 +307,23 @@ With the given data, the estimate is approximately $\hat{\lambda}_N = 0.0104$.
 The following algorithm takes a grid in the form of a dataframe with x- and y-coordinates and corresponding rate $\lambda$, and simulates a homogeneous P.P.P. in each point using the rate.
 
 ```{r}
-simulate_ppp_on_grid <- function(grid, cell_size, poisson_displacement=0) {
+simulate_pois_dyn_rate <- function(lambda) {
+  # Given some changing rate lambda, draws corresponding amount of samples
+  # for each rate.
+  # Args:
+  #   lambda (array-like): Varying rate of size m
+  # Returns:
+  #   Poisson samples of size m
+  k <- length(lambda)
+  return(
+    lapply(
+      1:k,
+      function(i) rpois(1, grid$lambda[i]*cell_size^2)
+    ) %>% unlist()
+  )
+}
+
+simulate_ppp_on_grid <- function(grid, poisson_displacement=0) {
   # Simulates a inhomogeneous Poisson point process on a square grid.
   # Args:
   #   grid  (Dataframe): Coordinates and rate (columns x, y, lambda)
@@ -315,7 +331,8 @@ simulate_ppp_on_grid <- function(grid, cell_size, poisson_displacement=0) {
   # Returns:
   #   Matrix of points
   k <- nrow(grid)
-  n <- rpois(k, grid$lambda*cell_size^2) + poisson_displacement # n for every point
+  n <-  simulate_pois_dyn_rate(grid$lambda) # BETTER WAY OF DOING THIS?
+  # n <- rpois(k, grid$lambda*cell_size^2) + poisson_displacement # n for every point
   points <- array(
     runif(2*sum(n), min=0, max=cell_size),
     c(sum(n), 2)
@@ -338,32 +355,56 @@ simulate_ppp_on_grid <- function(grid, cell_size, poisson_displacement=0) {
 ```
 
 ```{r}
-grid <- obsprob %>% select(c('x', 'y')) %>% mutate(lambda=lambda_hat)
-points_homogeneous_ppp <- replicate(3, simulate_ppp_on_grid(grid, cell_size=10), simplify=FALSE)
+cell_size <- 10
+prior.grid <- obsprob %>% select(c('x', 'y')) %>% mutate(lambda=cell_size^2*lambda_hat)
+prior.points_homogeneous_ppp <- replicate(3, simulate_ppp_on_grid(prior.grid), simplify=FALSE)
 ```
 
 ```{r}
 # png("figures/2_c.png", width=1200, height=1200, units="px", res=300) # Saving
 
 display_point_patterns(
-  points_homogeneous_ppp,
+  prior.points_homogeneous_ppp,
   titles=c("", "", "")
 )
 ```
 
 ## d)
 ```{r}
-grid <- obsprob %>% mutate(lambda=lambda_hat*(1-prob)) %>% select(-prob)
-m <- nrow(obspines %>% subset(obs > 0)) # THIS NEEDS TO BE A LIST OR DATAFRAME
-points_inhomogeneous_ppp <- replicate(3, simulate_ppp_on_grid(grid, cell_size=10, poisson_displacement=m), simplify=FALSE)
+posterior.grid <- obsprob %>% mutate(lambda=cell_size^2*lambda_hat*(1-prob)) %>% select(-prob)
+posterior.points_inhomogeneous_ppp <- replicate(3, simulate_ppp_on_grid(
+  posterior.grid, 
+  poisson_displacement=obspines$obs
+), simplify=FALSE)
 ```
 
 ```{r}
 # png("figures/2_d.png", width=1200, height=1200, units="px", res=300) # Saving
 
 display_point_patterns(
-  points_inhomogeneous_ppp,
+  posterior.points_inhomogeneous_ppp,
   titles=c("", "", "")
 )
+```
+
+It is clear that this point pattern is slightly more centered towards the "unknown" lower left of $W$, the area where $\alpha$ is small, and points are harder to detect. Nevertheless, even though the process is centered around this area due to the rate given by $\lambda_N(1-\alpha(\mathbf{x}))$, the points are still mostly uniformly spread, since the Poisson distribution for $\mathbf{N} | \mathbf{M}$ is displaced by $m$, which needs to be compensated for after simulation from the distribution by adding the observations $\mathbf{M}$. Naturally, $\mathbf{M}$ will tend to be larger where $\alpha$ is larger, which evens out the skew which can be found in the derived distribution.
+
+## e)
+```{r}
+n <- 500
+
+# Prior:
+prior.sim <- replicate(n, simulate_pois_dyn_rate(prior.grid$lambda)) %>% melt() %>%
+  group_by(Var2) %>% summarize(mean=mean(value), std=sd(value))
+prior.sim
+
+# Posterior:
+posterior.sim <- replicate(n, simulate_pois_dyn_rate(posterior.grid$lambda)) %>% melt() %>%
+  group_by(Var2) %>% summarize(mean=mean(value), std=sd(value))
+posterior.sim
+```
+
+```{r}
+ggplot(prior.sim) + geom_histogram(aes(x=mean))
 ```
 
