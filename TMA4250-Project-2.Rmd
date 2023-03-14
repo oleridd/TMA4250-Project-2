@@ -474,3 +474,11 @@ do.call(
 trimImages(path = "./figures", pattern = c(".png$"))
 ```
 
+
+# Problem 3
+
+
+
+
+# Problem 4
+
