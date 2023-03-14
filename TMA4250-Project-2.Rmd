@@ -476,9 +476,164 @@ trimImages(path = "./figures", pattern = c(".png$"))
 
 
 # Problem 3
+```{r, echo=FALSE, eval=FALSE}
+# Read in data
+#redwood <- read.table("/Users/olekristianskogly/Documents/Romlig stat/Project2/redwood.dat",  col.names = c("x", "y"))
+redwood <- read.table("/Users/olekristianskogly/Documents/Romlig stat/Project2/redwood.dat",col.names = c("x", "y"), sep = " ", header = TRUE)
+# Plot the data
+plot(redwood)
 
+# Function to simulate Neyman-Scott process 
+SimulateNSP <- function(lambda_p, lambda_d, sigma, xl = 0, xu = 1, yl = -1, yu = 0, min_d = 0) {
+  # Calculate the size of the extended window
+  ext_window_x <- c(xl - 2 * sigma, xu + 2 * sigma)
+  ext_window_y <- c(yl - 2 * sigma, yu + 2 * sigma)
+  ext_window_area <- diff(ext_window_x) * diff(ext_window_y)
+  
+  # Generate the parent points using a Poisson process
+  n_p <- rpois(1, lambda_p * ext_window_area)
+  x_p <- runif(n_p, ext_window_x[1], ext_window_x[2])
+  y_p <- runif(n_p, ext_window_y[1], ext_window_y[2])
+  
+  # Initialize arrays to store daughter points
+  x_d <- numeric()
+  y_d <- numeric()
+  
+  # Generate daughter points around each parent point
+  #browser()
+  for (i in seq_along(x_p)) {
+    n_d <- rpois(1, lambda_d)
+    if (n_d > 0) {
+      # Generate n_d daughter points around parent point i
+      mu <- c(x_p[i], y_p[i])
+      cov_mat <- sigma^2 * diag(2)
+      # ! error on line under when n_d = 1
+      d_points <- matrix(mvrnorm(n_d, mu, cov_mat), nrow = length(n_d))
+      if (nrow(d_points) > 0) {  # check if d_points has more than one row
+        x_d <- c(x_d, d_points[, 1])
+        y_d <- c(y_d, d_points[, 2])
+      }
+    } else { # add min_d points if n_d is zero
+      x_d <- c(x_d, rep(x_p[i], min_d))
+      y_d <- c(y_d, runif(min_d, yl, yu))
+    }
+  }
+  #browser()
+  # Remove daughter points outside the specified window
+  # changed the y coordinated, cannot check for -1 and 0 for y-axes here
+  keep_idx <- which(x_d >= xl & x_d <= xu & y_d >= 0 & y_d <= 1)
+  x_d <- x_d[keep_idx]
+  y_d <- y_d[keep_idx]
+  
+  # Return a list of daughter points
+  return(list(x = x_d, y = y_d))
+}
 
+options(error = recover)
+# Set random seed for reproducibility
+set.seed(4250)
+
+# Guestimate parent intensity
+lambda_p = 7
+
+# Guestimate daughter intensity
+lambda_d = 8
+
+# Guestimate Gaussian kernel standard deviation
+sigma = 0.01
+
+# Number of realizations
+nsim <- 100
+
+# Plot a realization from the guestimated Neyman-Scott process
+plot(SimulateNSP(lambda_p,lambda_d,sigma), xlab = 'x', ylab= 'y',  main = "A realization from the guestimated Neyman-Scott process")
+
+# Convert data to spatstat point pattern object
+#ppRedwood <- ppinit("redwood.dat")
+
+# Define study area
+ppregion(0, 1, 0, 1)
+#ppregion(0,1,-1,0)
+
+# Compute empirical L-function for observed
+LRedwood <- Kfn(redwood, fs = 1)
+
+# Construct a matrix to store the L-function values for each realization
+Lsimulations = matrix(NA, nrow = nsim, ncol = 70)
+
+for (i in 1:nsim) {
+  sim_L <- SimulateNSP(lambda_p, lambda_d, sigma, xl = 0, xu = 1, yl = -1, yu = 0, min_d = 0)
+  L_NS_temp <- Kfn(sim_L, 1, 100)
+  Lsimulations[i,] <- L_NS_temp$y
+}
+
+# Find upper and lower prediction intervals
+L_sims_upper <- apply((Lsimulations), 2, quantile, 0.95)
+
+L_sims_lower <- apply((Lsimulations), 2, quantile, 0.05)
+
+#L-function with empirical prediction interval from guestimated model
+plot(LRedwood$x, LRedwood$y, col = "blue", type = "l", lwd = 2, xlab = "r", ylab = "L(r)", main = "Plot of empirical L-function with empirical prediction interval from guestimated model.")
+lines(LRedwood$x, L_sims_upper, type = "l", col = "red", lwd = 2, lty = 2)
+lines(LRedwood$x, L_sims_lower, type = "l", col = "red", lwd = 2, lty = 2)
+for(i in 1:nsim){
+  lines(LRedwood$x,Lsimulations[i,], type = "l", col = "yellow", lwd = 2, lty = 2) 
+}
+legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
+```
 
 
 # Problem 4
+```{r, echo=FALSE, eval=FALSE}
+# Read in data
+#cells <- read.table("/Users/olekristianskogly/Documents/Romlig stat/Project2/cells.dat",  col.names = c("x", "y"))
+cells <- read.table("/Users/olekristianskogly/Documents/Romlig stat/Project2/cells.dat",col.names = c("x", "y"), sep = " ", header = TRUE)
+# Plot the data
+plot(cells)
+
+ppCells <- ppinit("cells.dat")
+n_Strauss <- length(ppCells$x)
+
+ppregion(0,1,0,1)
+LCells <- Kfn(ppCells, fs=1)
+
+
+#guessed parameters
+r_Strauss <- 0.01
+beta_Strauss <- 5
+c_Strauss <- exp(-beta_Strauss)
+
+# Number of realizations
+nsim <- 100
+
+# Construct a matrix to store the L-function values for each realization
+Lsimulations_Strauss = matrix(NA, nrow = nsim, ncol = 70)
+
+L_StraussUpper = rep(NA,70)
+L_StraussLower = rep(NA,70)
+
+ppregion()
+
+s <- Strauss(n_Strauss, c_Strauss, r_Strauss)
+plot(s)
+
+for (i in 1:nsim) {
+  sim_Strauss <- s
+  L_Strauss_temp <- Kfn(sim_Strauss, 1, 100)
+  Lsimulations_Strauss[i,] <- L_Strauss_temp$y
+}
+
+# Find upper and lower prediction intervals
+for (i in (1:70)){
+  L_StraussUpper[i] = quantile(Lsimulations_Strauss[,i], 0.95)
+  L_StraussLower[i] = quantile(Lsimulations_Strauss[,i], 0.05)
+}
+
+plot(LCells$x, LCells$y, col = "blue", lwd = 1, ylim = c(0,0.8))
+lines(LCells$x, L_StraussUpper, type = "l", col = "red", lwd = 2, lty = 2)
+lines(LCells$x, L_StraussLower, type = "l", col = "red", lwd = 2, lty = 2)
+legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
+
+```
+
 
