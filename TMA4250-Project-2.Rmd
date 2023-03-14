@@ -20,6 +20,8 @@ library(tidyverse)
 library(reshape2)
 library(ggnewscale)
 library(scales)
+library(latex2exp)
+library(Orcs)
 ```
 
 
@@ -41,7 +43,7 @@ head(pines)
 # Problem 1
 ## a)
 ```{r}
-display_point_patterns <- function(dataframes, titles) {
+display_point_patterns <- function(dataframes, titles, pts=1, txs=11) {
   # Plots point patterns for dataframes with point data
   # Args: Dataframes and titles as lists of the same lengths
   # Returns: None
@@ -49,9 +51,9 @@ display_point_patterns <- function(dataframes, titles) {
   do.call(
     wrap_plots,
     lapply(1:n, function(i) {
-      ggplot(dataframes[[i]]) + geom_point(aes(x, y), size=1) +
-        xlab('x') + ylab('y') + labs(title=titles[i]) +
-        coord_fixed()
+      ggplot(dataframes[[i]]) + geom_point(aes(x, y), size=pts) +
+        xlab('x [m]') + ylab('y [m]') + labs(title=titles[i]) +
+        coord_fixed() + theme(text=element_text(size=txs))
     })
   )
 }
@@ -64,7 +66,7 @@ plot_titles = c(
   "Pines"
 )
 
-# png("figures/1_a.png", width=3600, height=1200, units="px", res=300) # Saving
+png("figures/1_a.png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_point_patterns(list(
   cells,
@@ -74,7 +76,9 @@ display_point_patterns(list(
 ```
 For the Cells dataset, the points seem to be uniformly spread across the whole window. This would make sense since cells exist in very large quantities, and repel each other to a certain degree (https://www.hcplive.com/view/cells_repel). This will result in a uniform distribution of points when we pick a small window.
 
-Comparing the last two dataset, it is evident that redwood trees have a tendency to grow in clusters along streams and other bodies of water (https://www.fs.usda.gov/research/treesearch/41153), which is very evident in the point patern plotted above. Pines, however, tend to follow a more random pattern of growth (https://www.researchgate.net/publication/227015905_The_problem_of_accuracy_in_environmental_analysis), giving the random pattern that is seen in the rightmost plot of Figure (FIGREF).
+Comparing the last two dataset, it is would be reasonable to hypothesize that trees have a tendency to grow in clusters along streams and other bodies of water, which is very evident in the point pattern plotted above. Pines, however, seem to follow a more random pattern of growth, giving the random pattern that is seen in the rightmost plot of Figure (FIGREF).
+
+These hypotheses are prime candidates for fitting and inference using spatial point processes, which is what will be studied throughout this project. The project will also concern inference in cases with limited observation probabilities of points.
 
 ## b)
 The L-function is defined by
@@ -116,7 +120,7 @@ display_L_functions <- function(dataframes, titles) {
       ni <- nrow(dataframes[[i]])
       df <- dataframes[[i]] %>% mutate(xline=1:ni/100, yline=1:ni/100)
       ggplot(df) + geom_point(aes(x, y), size=1, col="red") +
-        xlab('x') + ylab('y') + labs(title=titles[i]) +
+        xlab('r') + ylab('L(r)') + labs(title=titles[i]) +
         geom_line(aes(xline, yline)) +
         coord_fixed()
     })
@@ -126,7 +130,7 @@ display_L_functions <- function(dataframes, titles) {
 
 
 ```{r}
-# png("figures/1_b.png", width=3600, height=1200, units="px", res=300) # Saving
+png("figures/1_b.png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_L_functions(list(
   L.cells,
@@ -221,8 +225,8 @@ display_L_functions_with_ppp_sim <- function(dataframes, titles, m=100) {
       ggplot(df) + geom_point(aes(x, y), size=1, col="red") +
         geom_line(aes(x, Lmean)) +
         geom_ribbon(aes(x, ymin=Lmean-LCI, ymax=Lmean+LCI), alpha=0.25) +
-        xlab('x') + ylab('y') + labs(title=titles[i]) +
-        coord_fixed()
+        xlab('r') + ylab('L(r)') + labs(title=titles[i]) +
+        coord_fixed() + theme(text=element_text(size=11))
     })
   )
 }
@@ -248,17 +252,17 @@ obsprob <- read.table("data/obsprob.txt", skip=1, col.names=c('x', 'y', 'prob'))
 
 
 ```{r}
-# png("figures/2_a1.png", width=1200, height=1200, units="px", res=300) # Saving
+png("figures/2_a1.png", width=2400, height=1900, units="px", res=300) # Saving
 ggplot(obspines) +
   geom_tile(aes(x, y, fill=obs)) + scale_fill_gradient(low="white", high="purple") +
   xlab('x [m]') + ylab('y [m]') + 
-  coord_fixed()
+  coord_fixed() + theme(text=element_text(size=10))
 
-# png("figures/2_a2.png", width=1200, height=1200, units="px", res=300) # Saving
+png("figures/2_a2.png", width=2400, height=1900, units="px", res=300) # Saving
 ggplot(obsprob) + 
   geom_tile(aes(x, y, fill=prob)) + scale_fill_gradient(low='white', high='darkgreen') + 
   xlab('x [m]') + ylab('y [m]') +
-  coord_fixed()
+  coord_fixed() + theme(text=element_text(size=10))
 ```
 
 
@@ -307,7 +311,7 @@ With the given data, the estimate is approximately $\hat{\lambda}_N = 0.0104$.
 The following algorithm takes a grid in the form of a dataframe with x- and y-coordinates and corresponding rate $\lambda$, and simulates a homogeneous P.P.P. in each point using the rate.
 
 ```{r}
-simulate_pois_dyn_rate <- function(lambda) {
+simulate_pois_dyn_rate <- function(lambda, displacement = 0) {
   # Given some changing rate lambda, draws corresponding amount of samples
   # for each rate.
   # Args:
@@ -318,8 +322,8 @@ simulate_pois_dyn_rate <- function(lambda) {
   return(
     lapply(
       1:k,
-      function(i) rpois(1, grid$lambda[i]*cell_size^2)
-    ) %>% unlist()
+      function(i) rpois(1, lambda[i])
+    ) %>% unlist() + displacement
   )
 }
 
@@ -331,8 +335,7 @@ simulate_ppp_on_grid <- function(grid, poisson_displacement=0) {
   # Returns:
   #   Matrix of points
   k <- nrow(grid)
-  n <-  simulate_pois_dyn_rate(grid$lambda) # BETTER WAY OF DOING THIS?
-  # n <- rpois(k, grid$lambda*cell_size^2) + poisson_displacement # n for every point
+  n <-  simulate_pois_dyn_rate(grid$lambda, poisson_displacement) # BETTER WAY OF DOING THIS?
   points <- array(
     runif(2*sum(n), min=0, max=cell_size),
     c(sum(n), 2)
@@ -361,11 +364,12 @@ prior.points_homogeneous_ppp <- replicate(3, simulate_ppp_on_grid(prior.grid), s
 ```
 
 ```{r}
-# png("figures/2_c.png", width=1200, height=1200, units="px", res=300) # Saving
+png("figures/2_c.png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_point_patterns(
   prior.points_homogeneous_ppp,
-  titles=c("", "", "")
+  titles=c("", "", ""),
+  txs=11
 )
 ```
 
@@ -379,11 +383,12 @@ posterior.points_inhomogeneous_ppp <- replicate(3, simulate_ppp_on_grid(
 ```
 
 ```{r}
-# png("figures/2_d.png", width=1200, height=1200, units="px", res=300) # Saving
+png("figures/2_d.png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_point_patterns(
   posterior.points_inhomogeneous_ppp,
-  titles=c("", "", "")
+  titles=c("", "", ""),
+  txs=11
 )
 ```
 
@@ -394,17 +399,78 @@ It is clear that this point pattern is slightly more centered towards the "unkno
 n <- 500
 
 # Prior:
-prior.sim <- replicate(n, simulate_pois_dyn_rate(prior.grid$lambda)) %>% melt() %>%
-  group_by(Var2) %>% summarize(mean=mean(value), std=sd(value))
+prior.sim <- replicate(n, simulate_pois_dyn_rate(prior.grid$lambda)) %>% melt() %>% # Simulating and creating a dataframe
+  group_by(Var1) %>% summarize(mean=mean(value), std=sd(value)) %>%                 # Grouping and getting mean and std
+  bind_cols(obsprob %>% select(c('x', 'y'))) %>% select(-Var1)                      # Concatenating grid coordinates and removing index
 prior.sim
 
 # Posterior:
-posterior.sim <- replicate(n, simulate_pois_dyn_rate(posterior.grid$lambda)) %>% melt() %>%
-  group_by(Var2) %>% summarize(mean=mean(value), std=sd(value))
+posterior.sim <- replicate(n, simulate_pois_dyn_rate(posterior.grid$lambda, displacement=obspines$obs)) %>% melt() %>%
+  group_by(Var1) %>% summarize(mean=mean(value), std=sd(value)) %>%
+  bind_cols(obsprob %>% select(c('x', 'y'))) %>% select(-Var1)
 posterior.sim
 ```
 
 ```{r}
-ggplot(prior.sim) + geom_histogram(aes(x=mean))
+df_merged <- merge(prior.sim, posterior.sim, by=c('x', 'y'))
+colnames(df_merged)[3:length(df_merged)] <- c("prior_mean", "prior_std", "posterior_mean", "posterior_std")
+# df_merged
+
+generate_boundary_indices <- function(fnc) {
+  # Generates either min or max for mean and std respectively to fit the
+  # plotting scheme below of df_merged.
+  val <- rep(0, 4)
+  val[c(1, 3)] <- df_merged %>% select(c('prior_mean', 'posterior_mean')) %>% fnc()
+  val[c(2, 4)] <- df_merged %>% select(c('prior_std', 'posterior_std')) %>% fnc()
+  return(val)
+}
+
+# Mins and maxes for each of the four plots:
+mins <- generate_boundary_indices(min)
+maxs <- generate_boundary_indices(max)
+col.lwr <- c("white", "green", "white", "green") # Thoughts: Low std: Good (green)
+col.upr <- c("purple", "red", "purple", "red")   # Thoughts: High std: Bad (red)
+
+png("figures/2_e.png", width=2400, height=1800, units="px", res=300) # Saving
+
+do.call(
+  wrap_plots,
+  lapply(1:4, function(i) {
+    df_merged %>% {
+      ggplot(.) +
+        geom_tile(aes_string(x='x', y='y', fill=names(.)[i+2])) +
+        scale_fill_gradient(low=col.lwr[i], high=col.upr[i],limits=c(mins[i], maxs[i])) +
+        xlab('x [m]') + ylab('y [m]') + labs(cbar="test") +
+        coord_fixed() + theme(text=element_text(size=9))
+    }
+  })
+)
+```
+There is a clear distinction between the prior Poisson point process and the posterior, in that the gradient caused by the detection probabilities is very apparent. One can also see that there is significantly less variance in general for the posterior values, especially at the top right, where there is a high detection probability.
+
+```{r, echo=FALSE, eval=FALSE}
+df_merged <- merge(prior.sim, posterior.sim, by="Var2")
+xlabels <- c(TeX("Prior $\\hat{\\mu}$"), TeX("Prior $\\hat{\\sigma}$"), TeX("Posterior $\\hat{\\mu}$"), TeX("Posterior $\\hat{\\sigma}$"))
+
+xmin <- df_merged %>% select(-Var2) %>% min()
+xmax <- df_merged %>% select(-Var2) %>% max()
+
+# png("figures/2_e.png", width=1600, height=1200, units="px", res=300) # Saving
+
+do.call(
+  wrap_plots,
+  lapply(1:4, function(i) {
+    df_merged %>% {
+      ggplot(.) +
+      geom_histogram(aes_string(x=names(.)[i+1]), bins=40) +
+      geom_vline(xintercept=mean(.[,i+1]), col="red") +
+      xlim(xmin, xmax) + xlab(xlabels[i])
+    }
+  })
+)
+```
+
+```{r}
+trimImages(path = "./figures", pattern = c(".png$"))
 ```
 
