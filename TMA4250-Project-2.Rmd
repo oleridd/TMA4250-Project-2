@@ -618,7 +618,7 @@ s <- Strauss(n_Strauss, c_Strauss, r_Strauss)
 plot(s)
 
 for (i in 1:nsim) {
-  sim_Strauss <- s
+  sim_Strauss <- Strauss(n_Strauss,c_Strauss, r_Strauss)
   L_Strauss_temp <- Kfn(sim_Strauss, 1, 100)
   Lsimulations_Strauss[i,] <- L_Strauss_temp$y
 }
