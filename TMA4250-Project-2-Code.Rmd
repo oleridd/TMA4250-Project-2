@@ -66,7 +66,7 @@ plot_titles = c(
   "Pines"
 )
 
-png("figures/1_a.png", width=3600, height=1200, units="px", res=300) # Saving
+# png("figures/1_a.# png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_point_patterns(list(
   cells,
@@ -74,11 +74,6 @@ display_point_patterns(list(
   pines
 ), plot_titles)
 ```
-For the Cells dataset, the points seem to be uniformly spread across the whole window. This would make sense since cells exist in very large quantities, and repel each other to a certain degree (https://www.hcplive.com/view/cells_repel). This will result in a uniform distribution of points when we pick a small window.
-
-Comparing the last two dataset, it is would be reasonable to hypothesize that trees have a tendency to grow in clusters along streams and other bodies of water, which is very evident in the point pattern plotted above. Pines, however, seem to follow a more random pattern of growth, giving the random pattern that is seen in the rightmost plot of Figure (FIGREF).
-
-These hypotheses are prime candidates for fitting and inference using spatial point processes, which is what will be studied throughout this project. The project will also concern inference in cases with limited observation probabilities of points.
 
 ## b)
 The L-function is defined by
@@ -130,7 +125,7 @@ display_L_functions <- function(dataframes, titles) {
 
 
 ```{r}
-png("figures/1_b.png", width=3600, height=1200, units="px", res=300) # Saving
+# png("figures/1_b.# png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_L_functions(list(
   L.cells,
@@ -139,19 +134,8 @@ display_L_functions(list(
 ), titles=plot_titles)
 ```
 
-If, for small distances, the L-function diverges from the theoretical straight function (a straight line), then that is a implication that there is either clustering or repulsion in the dataset. For each of the datasets provided:
-- Cells: The L-function goes below the theoretical L-function, meaning that there are fewer points than expected in the ball with small $r$. This implies that there is repulsion in the point process, and a Gibbs process might be more suitable.
-- Redwood: The L-function is slightly higher than the theoretical function for small $r$, which is an implication of clustering, as discussed in 1a), and a Neymann-Scott process may therefore be more suitable.
-- Pines: The estimated L-function is mostly a straight line corresponding to the theoretical function, implying that a Poisson point process is a suitable model.
-
 
 ## c)
-For a homogeneous Poisson point process on a window $W\subseteq \mathbb{R}^m$, we have the convenient result:
-\begin{equation}
-  \left[\mathbf{x}_1. \cdots, \mathbf{x}_n | N(W)=n\right] \overset{\text{i.i.d.}}{\sim} U(W)
-\end{equation}
-
-In this case, $m=2$ and $W=[0, 1]\times[0, 1]$. The points are therefore very easy to simulate, as they follow a uniform distribution on $W$.
 ```{r}
 simulate_R2_unif <- function(n, m) {
   # Simulates a homogeneous Poisson point process on R^2 in m realizations on [0, 1]x[0, 1].
@@ -233,7 +217,7 @@ display_L_functions_with_ppp_sim <- function(dataframes, titles, m=100) {
 ```
 
 ```{r}
-png("figures/1_c.png", width=3600, height=1200, units="px", res=300) # Saving
+# png("figures/1_c.# png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_L_functions_with_ppp_sim(list(
   L.cells,
@@ -252,13 +236,13 @@ obsprob <- read.table("data/obsprob.txt", skip=1, col.names=c('x', 'y', 'prob'))
 
 
 ```{r}
-png("figures/2_a1.png", width=2400, height=1900, units="px", res=300) # Saving
+# png("figures/2_a1.# png", width=2400, height=1900, units="px", res=300) # Saving
 ggplot(obspines) +
   geom_tile(aes(x, y, fill=obs)) + scale_fill_gradient(low="white", high="purple") +
   xlab('x [m]') + ylab('y [m]') + 
   coord_fixed() + theme(text=element_text(size=10))
 
-png("figures/2_a2.png", width=2400, height=1900, units="px", res=300) # Saving
+# png("figures/2_a2.# png", width=2400, height=1900, units="px", res=300) # Saving
 ggplot(obsprob) + 
   geom_tile(aes(x, y, fill=prob)) + scale_fill_gradient(low='white', high='darkgreen') + 
   xlab('x [m]') + ylab('y [m]') +
@@ -267,26 +251,6 @@ ggplot(obsprob) +
 
 
 ## b)
-Assuming that the pine trees follow a Poisson point process, which supports the conclusions made in 1). It can be proved that if $\alpha: W \rightarrow[0,1]$ denotes detection probabilities on $W$ (which in this case is defined as $W = [0, 300]\times[0, 300]$), and $N(\mathbf{x})$ is a homogeneous Poisson P.P. with rate $\lambda_N$ then the observed points $M(\mathbf{x})$ follow an inhomogeneous Poisson P.P. with rate given by
-\begin{equation}
-  \lambda_M(\mathbf{x}) = \lambda_N \alpha(\mathbf{x}) \: \:\forall \: \mathbf{x} \in W
-\end{equation}
-Thus, we get that
-\begin{align}
-  M | N &\sim \mathrm{Poisson}(\nu_{\lambda_M}(W)) \\
-  \nu_{\lambda_M}(W) &= \lambda_N\int_W{\alpha_(\mathbf{x})\mathrm{d}\mathbf{x}}
-\end{align}
-Consequently, the point locations are distributed uniformly with pdf
-\begin{equation}
-  f(\mathbf{x}_1, \cdots, \mathbf{x}_m | M(W)=m) = \prod_{i=1}^m{\frac{\lambda_M(\mathbf{x}_i)}{\nu_{\lambda_M}(W)}} = \left(\frac{\lambda_N}{\nu_{\lambda_M}(W)}\right)^m\prod_{i=1}^m{\alpha(\mathbf{x}_i)}
-\end{equation}
-
-## c)
-We want to determine $C$ such that
-\begin{equation}
-  \hat{\Lambda} = \frac{1}{C}\sum_{i, j}{M_{ij}}
-\end{equation}
-is unbiased.
 
 Estimate from data:
 ```{r}
@@ -306,9 +270,6 @@ lambda_hat <- remote_estimate_lambda(obspines$obs, obsprob$prob, grid_size)
 lambda_hat
 ```
 
-With the given data, the estimate is approximately $\hat{\lambda}_N = 0.0104$.
-
-The following algorithm takes a grid in the form of a dataframe with x- and y-coordinates and corresponding rate $\lambda$, and simulates a homogeneous P.P.P. in each point using the rate.
 
 ```{r}
 simulate_pois_dyn_rate <- function(lambda, displacement = 0) {
@@ -364,7 +325,7 @@ prior.points_homogeneous_ppp <- replicate(3, simulate_ppp_on_grid(prior.grid), s
 ```
 
 ```{r}
-png("figures/2_c.png", width=3600, height=1200, units="px", res=300) # Saving
+# # png("figures/2_c.# png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_point_patterns(
   prior.points_homogeneous_ppp,
@@ -383,7 +344,7 @@ posterior.points_inhomogeneous_ppp <- replicate(3, simulate_ppp_on_grid(
 ```
 
 ```{r}
-png("figures/2_d.png", width=3600, height=1200, units="px", res=300) # Saving
+# png("figures/2_d.# png", width=3600, height=1200, units="px", res=300) # Saving
 
 display_point_patterns(
   posterior.points_inhomogeneous_ppp,
@@ -392,7 +353,6 @@ display_point_patterns(
 )
 ```
 
-It is clear that this point pattern is slightly more centered towards the "unknown" lower left of $W$, the area where $\alpha$ is small, and points are harder to detect. Nevertheless, even though the process is centered around this area due to the rate given by $\lambda_N(1-\alpha(\mathbf{x}))$, the points are still mostly uniformly spread, since the Poisson distribution for $\mathbf{N} | \mathbf{M}$ is displaced by $m$, which needs to be compensated for after simulation from the distribution by adding the observations $\mathbf{M}$. Naturally, $\mathbf{M}$ will tend to be larger where $\alpha$ is larger, which evens out the skew which can be found in the derived distribution.
 
 ## e)
 ```{r}
@@ -431,7 +391,7 @@ maxs <- generate_boundary_indices(max)
 col.lwr <- c("white", "green", "white", "green") # Thoughts: Low std: Good (green)
 col.upr <- c("purple", "red", "purple", "red")   # Thoughts: High std: Bad (red)
 
-png("figures/2_e.png", width=2400, height=1800, units="px", res=300) # Saving
+# png("figures/2_e.# png", width=2400, height=1800, units="px", res=300) # Saving
 
 do.call(
   wrap_plots,
@@ -446,7 +406,6 @@ do.call(
   })
 )
 ```
-There is a clear distinction between the prior Poisson point process and the posterior, in that the gradient caused by the detection probabilities is very apparent. One can also see that there is significantly less variance in general for the posterior values, especially at the top right, where there is a high detection probability.
 
 ```{r, echo=FALSE, eval=FALSE}
 df_merged <- merge(prior.sim, posterior.sim, by="Var2")
@@ -455,7 +414,7 @@ xlabels <- c(TeX("Prior $\\hat{\\mu}$"), TeX("Prior $\\hat{\\sigma}$"), TeX("Pos
 xmin <- df_merged %>% select(-Var2) %>% min()
 xmax <- df_merged %>% select(-Var2) %>% max()
 
-# png("figures/2_e.png", width=1600, height=1200, units="px", res=300) # Saving
+# # png("figures/2_e.# png", width=1600, height=1200, units="px", res=300) # Saving
 
 do.call(
   wrap_plots,
@@ -472,6 +431,8 @@ do.call(
 
 
 # Problem 3
+
+Simulation:
 ```{r, echo=FALSE, eval=FALSE}
 # Read in data
 redwood <- read.table("data/redwood.dat", skip=3, col.names = c("x", "y"))
@@ -540,11 +501,6 @@ sigma = 0.05
 # Number of realizations
 nsim <- 100
 
-# Plot a realization from the guestimated Neyman-Scott process
-#plot(SimulateNSP(lambda_p,lambda_d,sigma), xlab = 'x', ylab= 'y',  main = "A realization from the guestimated Neyman-Scott process")
-
-# Convert data to spatstat point pattern object
-#ppRedwood <- ppinit("redwood.dat")
 
 # Define study area
 ppregion(0, 1, 0, 1)
@@ -583,32 +539,35 @@ sim_L_summary <- function(sim) {
 # Summarizing statistics:
 redwood.L <- sim_L_summary(Lsimulations)
 
-#Plot redwood data and three realizations
-par(mfrow=c(2,2)) # Set up 2x2 grid of plots
-plot(redwood, main="Redwood data") # First plot
-for (i in 1:3) {
-  sim_NSP_3realizations = SimulateNSP(lambda_p,lambda_d,sigma)
-  plot(sim_NSP_3realizations, main=paste("Simulated realization", i), xlab='x', ylab='y', xlim=c(0,1), ylim=c(0,1)) # Subsequent plots
-}
+```
+
+Plot:
+```{r}
+# png("figures/3_1.# png", width=2400, height=2600, units="px", res=300)
+
+# Plot redwood data and three realizations
+
+patterns <- list(redwood)
+patterns[2:4] <- replicate(3, SimulateNSP(lambda_p,lambda_d,sigma) %>% data.frame(), simplify=FALSE)
+
+display_point_patterns(
+  patterns,
+  titles=c("Redwood dataset", "Redwood realization 1", "Redwood realization 2", "Redwood realization 3")
+  )
+
 
 # Plot
+# png("figures/3_2.# png", width=2600, height=2200, units="px", res=300)
 par(mfrow=c(1,1))
 ggplot(redwood.L) + geom_line(aes(x=r, y=L_mean), col="red") +
   geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2) +
   ylab("L")
-
-# Old code:
-# plot(LRedwood$x, LRedwood$y, col = "blue", type = "l", lwd = 2, xlab = "r", ylab = "L(r)", main = "Plot of empirical L-function with empirical prediction interval from guestimated model.")
-# lines(LRedwood$x, L_sims_upper, type = "l", col = "red", lwd = 2, lty = 2)
-# lines(LRedwood$x, L_sims_lower, type = "l", col = "red", lwd = 2, lty = 2)
-# for(i in 1:nsim){
-#   lines(LRedwood$x,Lsimulations[i,], type = "l", col = "yellow", lwd = 2, lty = 2) 
-# }
-# legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
 ```
 
 
 # Problem 4
+
+Simulation:
 ```{r, echo=FALSE, eval=FALSE}
 # Read in data
 cells <- read.table("data/cells.dat", skip=3, col.names=c('x', 'y'))
@@ -638,9 +597,6 @@ L_StraussLower = rep(NA,70)
 
 ppregion()
 
-#s <- Strauss(n_Strauss, c_Strauss, r_Strauss)
-#plot(s)
-
 for (i in 1:nsim) {
   sim_Strauss <- Strauss(n_Strauss,c_Strauss, r_Strauss)
   L_Strauss_temp <- Kfn(sim_Strauss, 1, 100)
@@ -649,33 +605,26 @@ for (i in 1:nsim) {
 
 # Summarizing statistics:
 cells.L <- sim_L_summary(Lsimulations_Strauss)
+```
+
+
+Plot:
+```{r}
+# # png("figures/4_1.jpg", width=2400, height=2600, units="px", res=300)
 
 #Plot of the cells data and the three simulated realizations
-par(mfrow=c(2,2)) # Set up 2x2 grid of plots
-plot(cells, main="Cells data") # First plot
-for (i in 1:3) {
-  sim_Strauss_3realizations = Strauss(n_Strauss, c_Strauss, r_Strauss)
-  plot(sim_Strauss_3realizations, main=paste("Simulated realization", i), xlab='x', ylab='y', xlim=c(0,1), ylim=c(0,1)) # Subsequent plots
-}
+cells.patterns <- list(cells)
+cells.patterns[2:4] <- replicate(3, Strauss(n_Strauss, c_Strauss, r_Strauss)[1:2] %>% data.frame(), simplify=FALSE)
 
-# Plot
+display_point_patterns(
+  cells.patterns,
+  titles=c("Cells dataset", "Cells realization 1", "Cells realization 2", "Cells realization 2")
+  )
+
+# png("figures/4_2.# png", width=2600, height=2200, units="px", res=300)
 par(mfrow=c(1,1))
 ggplot(cells.L) + geom_line(aes(x=r, y=L_mean), col="red") +
   geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2) +
   ylab("L")
-
-
-# Old code:
-# Find upper and lower prediction intervals
-# for (i in (1:70)){
-#   L_StraussUpper[i] = quantile(Lsimulations_Strauss[,i], 0.95)
-#   L_StraussLower[i] = quantile(Lsimulations_Strauss[,i], 0.05)
-# }
-
-# plot(LCells$x, LCells$y, col = "blue", lwd = 1, ylim = c(0,0.8))
-# lines(LCells$x, L_StraussUpper, type = "l", col = "red", lwd = 2, lty = 2)
-# lines(LCells$x, L_StraussLower, type = "l", col = "red", lwd = 2, lty = 2)
-# legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
-
 ```
 
