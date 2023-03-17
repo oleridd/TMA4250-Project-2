@@ -476,7 +476,7 @@ do.call(
 # Read in data
 redwood <- read.table("data/redwood.dat", skip=3, col.names = c("x", "y"))
 # Plot the data
-plot(redwood)
+#plot(redwood)
 
 # Function to simulate Neyman-Scott process 
 SimulateNSP <- function(lambda_p, lambda_d, sigma, xl = 0, xu = 1, yl = -1, yu = 0, min_d = 0) {
@@ -611,7 +611,7 @@ ggplot(redwood.L) + geom_line(aes(x=r, y=L_mean), col="red") +
 # Problem 4
 ```{r, echo=FALSE, eval=FALSE}
 # Read in data
-#cells <- read.table("data/cells.dat", skip=3, col.names=c('x', 'y'))
+cells <- read.table("data/cells.dat", skip=3, col.names=c('x', 'y'))
 # Plot the data
 #plot(cells)
 
