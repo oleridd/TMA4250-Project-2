@@ -583,7 +583,16 @@ sim_L_summary <- function(sim) {
 # Summarizing statistics:
 redwood.L <- sim_L_summary(Lsimulations)
 
+#Plot redwood data and three realizations
+par(mfrow=c(2,2)) # Set up 2x2 grid of plots
+plot(redwood, main="Redwood data") # First plot
+for (i in 1:3) {
+  sim_NSP_3realizations = SimulateNSP(lambda_p,lambda_d,sigma)
+  plot(sim_NSP_3realizations, main=paste("Simulated realization", i), xlab='x', ylab='y', xlim=c(0,1), ylim=c(0,1)) # Subsequent plots
+}
+
 # Plot
+par(mfrow=c(1,1))
 ggplot(redwood.L) + geom_line(aes(x=r, y=L_mean), col="red") +
   geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2) +
   ylab("L")
@@ -602,9 +611,9 @@ ggplot(redwood.L) + geom_line(aes(x=r, y=L_mean), col="red") +
 # Problem 4
 ```{r, echo=FALSE, eval=FALSE}
 # Read in data
-cells <- read.table("data/cells.dat", skip=3, col.names=c('x', 'y'))
+#cells <- read.table("data/cells.dat", skip=3, col.names=c('x', 'y'))
 # Plot the data
-plot(cells)
+#plot(cells)
 
 ppCells <- ppinit("cells.dat")
 n_Strauss <- length(ppCells$x)
@@ -629,8 +638,8 @@ L_StraussLower = rep(NA,70)
 
 ppregion()
 
-s <- Strauss(n_Strauss, c_Strauss, r_Strauss)
-plot(s)
+#s <- Strauss(n_Strauss, c_Strauss, r_Strauss)
+#plot(s)
 
 for (i in 1:nsim) {
   sim_Strauss <- Strauss(n_Strauss,c_Strauss, r_Strauss)
@@ -641,7 +650,16 @@ for (i in 1:nsim) {
 # Summarizing statistics:
 cells.L <- sim_L_summary(Lsimulations_Strauss)
 
+#Plot of the cells data and the three simulated realizations
+par(mfrow=c(2,2)) # Set up 2x2 grid of plots
+plot(cells, main="Cells data") # First plot
+for (i in 1:3) {
+  sim_Strauss_3realizations = Strauss(n_Strauss, c_Strauss, r_Strauss)
+  plot(sim_Strauss_3realizations, main=paste("Simulated realization", i), xlab='x', ylab='y', xlim=c(0,1), ylim=c(0,1)) # Subsequent plots
+}
+
 # Plot
+par(mfrow=c(1,1))
 ggplot(cells.L) + geom_line(aes(x=r, y=L_mean), col="red") +
   geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2) +
   ylab("L")
