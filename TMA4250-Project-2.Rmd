@@ -541,7 +541,7 @@ sigma = 0.05
 nsim <- 100
 
 # Plot a realization from the guestimated Neyman-Scott process
-plot(SimulateNSP(lambda_p,lambda_d,sigma), xlab = 'x', ylab= 'y',  main = "A realization from the guestimated Neyman-Scott process")
+#plot(SimulateNSP(lambda_p,lambda_d,sigma), xlab = 'x', ylab= 'y',  main = "A realization from the guestimated Neyman-Scott process")
 
 # Convert data to spatstat point pattern object
 #ppRedwood <- ppinit("redwood.dat")
