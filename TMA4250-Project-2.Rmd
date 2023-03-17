@@ -478,8 +478,7 @@ trimImages(path = "./figures", pattern = c(".png$"))
 # Problem 3
 ```{r, echo=FALSE, eval=FALSE}
 # Read in data
-#redwood <- read.table("/Users/olekristianskogly/Documents/Romlig stat/Project2/redwood.dat",  col.names = c("x", "y"))
-redwood <- read.table("/Users/olekristianskogly/Documents/Romlig stat/Project2/redwood.dat",col.names = c("x", "y"), sep = " ", header = TRUE)
+redwood <- read.table("data/redwood.dat", skip=3, col.names = c("x", "y"))
 # Plot the data
 plot(redwood)
 
@@ -567,27 +566,46 @@ for (i in 1:nsim) {
   Lsimulations[i,] <- L_NS_temp$y
 }
 
-# Find upper and lower prediction intervals
-L_sims_upper <- apply((Lsimulations), 2, quantile, 0.95)
 
-L_sims_lower <- apply((Lsimulations), 2, quantile, 0.05)
-
-#L-function with empirical prediction interval from guestimated model
-plot(LRedwood$x, LRedwood$y, col = "blue", type = "l", lwd = 2, xlab = "r", ylab = "L(r)", main = "Plot of empirical L-function with empirical prediction interval from guestimated model.")
-lines(LRedwood$x, L_sims_upper, type = "l", col = "red", lwd = 2, lty = 2)
-lines(LRedwood$x, L_sims_lower, type = "l", col = "red", lwd = 2, lty = 2)
-for(i in 1:nsim){
-  lines(LRedwood$x,Lsimulations[i,], type = "l", col = "yellow", lwd = 2, lty = 2) 
+# Utility for summary statistics dataframe:
+sim_L_summary <- function(sim) {
+#   Given a matrix n by m of n realizations of simulation
+#   producing m values of L-fnc, calculates mean, and 90% Pi.
+  L <- sim %>%
+  melt(varnames=c('rel', 'r')) %>%
+  mutate(r=r/max(r)) %>%
+  group_by(r) %>%
+  summarise(
+    L_mean=mean(value),
+    PI90_lwr=quantile(value, 0.05),
+    PI90_upr=quantile(value, 0.95)
+  )
+  return(L)
 }
-legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
+
+
+# Summarizing statistics:
+redwood.L <- sim_L_summary(Lsimulations)
+
+# Plot
+ggplot(redwood.L) + geom_line(aes(x=r, y=L_mean), col="red") +
+  geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2)
+
+# Old code:
+# plot(LRedwood$x, LRedwood$y, col = "blue", type = "l", lwd = 2, xlab = "r", ylab = "L(r)", main = "Plot of empirical L-function with empirical prediction interval from guestimated model.")
+# lines(LRedwood$x, L_sims_upper, type = "l", col = "red", lwd = 2, lty = 2)
+# lines(LRedwood$x, L_sims_lower, type = "l", col = "red", lwd = 2, lty = 2)
+# for(i in 1:nsim){
+#   lines(LRedwood$x,Lsimulations[i,], type = "l", col = "yellow", lwd = 2, lty = 2) 
+# }
+# legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
 ```
 
 
 # Problem 4
 ```{r, echo=FALSE, eval=FALSE}
 # Read in data
-#cells <- read.table("/Users/olekristianskogly/Documents/Romlig stat/Project2/cells.dat",  col.names = c("x", "y"))
-cells <- read.table("/Users/olekristianskogly/Documents/Romlig stat/Project2/cells.dat",col.names = c("x", "y"), sep = " ", header = TRUE)
+cells <- read.table("data/cells.dat", skip=3, col.names=c('x', 'y'))
 # Plot the data
 plot(cells)
 
@@ -623,17 +641,30 @@ for (i in 1:nsim) {
   Lsimulations_Strauss[i,] <- L_Strauss_temp$y
 }
 
-# Find upper and lower prediction intervals
-for (i in (1:70)){
-  L_StraussUpper[i] = quantile(Lsimulations_Strauss[,i], 0.95)
-  L_StraussLower[i] = quantile(Lsimulations_Strauss[,i], 0.05)
-}
+# Summarizing statistics:
+cells.L <- sim_L_summary(Lsimulations_Strauss)
 
-plot(LCells$x, LCells$y, col = "blue", lwd = 1, ylim = c(0,0.8))
-lines(LCells$x, L_StraussUpper, type = "l", col = "red", lwd = 2, lty = 2)
-lines(LCells$x, L_StraussLower, type = "l", col = "red", lwd = 2, lty = 2)
-legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
+# Plot
+ggplot(cells.L) + geom_line(aes(x=r, y=L_mean), col="red") +
+  geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2)
+
+
+# Old code:
+# Find upper and lower prediction intervals
+# for (i in (1:70)){
+#   L_StraussUpper[i] = quantile(Lsimulations_Strauss[,i], 0.95)
+#   L_StraussLower[i] = quantile(Lsimulations_Strauss[,i], 0.05)
+# }
+
+# plot(LCells$x, LCells$y, col = "blue", lwd = 1, ylim = c(0,0.8))
+# lines(LCells$x, L_StraussUpper, type = "l", col = "red", lwd = 2, lty = 2)
+# lines(LCells$x, L_StraussLower, type = "l", col = "red", lwd = 2, lty = 2)
+# legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
 
 ```
 
+```{r}
+Lsimulations_Strauss[1, ] - Lsimulations_Strauss[2, ]
+
+```
 
