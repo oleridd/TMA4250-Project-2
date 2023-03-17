@@ -470,10 +470,6 @@ do.call(
 )
 ```
 
-```{r}
-trimImages(path = "./figures", pattern = c(".png$"))
-```
-
 
 # Problem 3
 ```{r, echo=FALSE, eval=FALSE}
@@ -589,7 +585,8 @@ redwood.L <- sim_L_summary(Lsimulations)
 
 # Plot
 ggplot(redwood.L) + geom_line(aes(x=r, y=L_mean), col="red") +
-  geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2)
+  geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2) +
+  ylab("L")
 
 # Old code:
 # plot(LRedwood$x, LRedwood$y, col = "blue", type = "l", lwd = 2, xlab = "r", ylab = "L(r)", main = "Plot of empirical L-function with empirical prediction interval from guestimated model.")
@@ -646,7 +643,8 @@ cells.L <- sim_L_summary(Lsimulations_Strauss)
 
 # Plot
 ggplot(cells.L) + geom_line(aes(x=r, y=L_mean), col="red") +
-  geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2)
+  geom_ribbon(aes(x=r, ymin=PI90_lwr, ymax=PI90_upr), alpha=0.2) +
+  ylab("L")
 
 
 # Old code:
@@ -660,11 +658,6 @@ ggplot(cells.L) + geom_line(aes(x=r, y=L_mean), col="red") +
 # lines(LCells$x, L_StraussUpper, type = "l", col = "red", lwd = 2, lty = 2)
 # lines(LCells$x, L_StraussLower, type = "l", col = "red", lwd = 2, lty = 2)
 # legend('topleft', cex = 0.7, c("90% prediction interval from guestimated model", "Empirical L-function from the data"), lty=c(2,1), col = c("red", "blue"), lwd = c(1.5,2))
-
-```
-
-```{r}
-Lsimulations_Strauss[1, ] - Lsimulations_Strauss[2, ]
 
 ```
 
