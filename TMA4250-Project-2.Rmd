@@ -529,13 +529,13 @@ options(error = recover)
 set.seed(4250)
 
 # Guestimate parent intensity
-lambda_p = 7
+lambda_p = 9
 
 # Guestimate daughter intensity
-lambda_d = 8
+lambda_d = 7
 
 # Guestimate Gaussian kernel standard deviation
-sigma = 0.01
+sigma = 0.05
 
 # Number of realizations
 nsim <- 100
